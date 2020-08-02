@@ -1,0 +1,26 @@
+{
+  "name": "web-base",
+  "version": "1.0.0",
+  "description": "practice",
+  "main": "index.js",
+  "dependencies": {
+    "koa": "^2.13.0",
+    "koa-router": "^9.1.0",
+    "vue": "^2.6.11"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hahei89/web-base.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hahei89/web-base/issues"
+  },
+  "homepage": "https://github.com/hahei89/web-base#readme"
+}
