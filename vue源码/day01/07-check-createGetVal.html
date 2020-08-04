@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      // 这个函数是在Vue编译模板的时候就生成了
+      function createGetValByPath (path) {
+        let paths = path.split('.') // [xxx, yyy, zzz]
+        // 先取得obj里面的xxx，再取得 结果中的 yyy，再取得 上次结果中的 zzz
+
+        return function getValueByPath (obj) {
+          let res = obj
+          let prop = null
+          while ((prop = paths.shift())) {
+            res = res[prop]
+          }
+          return res
+        }
+      }
+      let getValueByPath = createGetValByPath('a.b.c.d')
+      let o = {
+        a: {
+          b: {
+            c: {
+              d: {
+                e: '正确了'
+              }
+            }
+          }
+        }
+      }
+      let res = getValueByPath(o)
+      console.log(res)
+    </script>
+  </body>
+</html>
