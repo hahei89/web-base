@@ -90,3 +90,16 @@ render的作用是将 虚拟DOM 转换为 真正的DOM加到页面中
   
 我们可以将代码进行优化，将虚拟DOM缓存起来，生成一个函数，函数只需要传入数据，就可以得到真正的DOM
 
+# 响应式原理
+- 我们在使用Vue的时候， 赋值数型获得属性都是直接使用的Vue实例
+- 我们在设计属性值的时候， 页面的数据更新
+```js
+Object.defineProperty(obj, name, {
+    writeble,
+    configurble,
+    enumerble,
+    set,
+    get
+})
+```
+# 发布订阅模式
