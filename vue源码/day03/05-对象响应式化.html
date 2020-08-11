@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      let data = {
+        name: '张三',
+        age: 19,
+        course: [{ name: '语文' }, { name: '数学' }, { name: '英语' }]
+      }
+      function defineReactive (target, key, value, enumerable = true) {
+        // 简化
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
+          // 非数组引用类型
+          reactify(value)
+        }
+        // 非引用类型
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: !!enumerable,
+          get () {
+            console.log('读取属性')
+            return value
+          },
+          set (newVal) {
+            console.log('设置属性')
+            value = newVal
+          }
+        })
+      }
+      /**
+       * @name: reactify
+       * @Author: litianhua
+       * @Date: 2020-08-09 22:19:03
+       * @Description: 将对象响应式化
+       * @params: {o: object}
+       * @return {}
+       */
+      function reactify (o) {
+        let keys = Object.keys(o)
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i] //属性名
+          const value = o[key]
+          // 判断这个属性是否为引用类型
+          // 判断是不是数组
+          // 引用类型需要递归
+          // 数组，需要循环数组，将数组里面的元素进行响应式化
+          // 如果不是引用类型，需要使用defineReactive将其变成响应式的
+          // 如果是引用类型，还是需要使用defineReactive将其变成响应式的
+          if (Array.isArray(value)) {
+            // 数组
+            for (let j = 0; j < value.length; j++) {
+              reactify(value[j]) //数组
+            }
+          } else {
+            // 对象或值类型
+            defineReactive(o, key, value, true)
+          }
+        }
+      }
+      reactify(data)
+    </script>
+  </body>
+</html>
