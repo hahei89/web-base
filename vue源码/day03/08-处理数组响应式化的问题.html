@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      function defineReactive (target, key, value, enumerable = true) {
+        // 简化
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
+          // 非数组引用类型
+          reactify(value)
+        }
+        // 非引用类型
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: !!enumerable,
+          get () {
+            console.log('读取属性')
+            return value
+          },
+          set (newVal) {
+            console.log('设置属性')
+            value = newVal
+          }
+        })
+      }
+      /**
+       * @name: reactify
+       * @Author: litianhua
+       * @Date: 2020-08-09 22:19:03
+       * @Description: 将对象响应式化
+       * @params: {o: object}
+       * @return {}
+       */
+      function reactify (o) {
+        let keys = Object.keys(o)
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i] //属性名
+          const value = o[key]
+          // 判断这个属性是否为引用类型
+          // 判断是不是数组
+          // 引用类型需要递归
+          // 数组，需要循环数组，将数组里面的元素进行响应式化
+          // 如果不是引用类型，需要使用defineReactive将其变成响应式的
+          // 如果是引用类型，还是需要使用defineReactive将其变成响应式的
+          if (Array.isArray(value)) {
+            // 数组
+            value.__proto__ = array_methods //数组就响应式了
+            for (let j = 0; j < value.length; j++) {
+              reactify(value[j]) //数组
+            }
+          } else {
+            // 对象或值类型
+            defineReactive(o, key, value, true)
+          }
+        }
+      }
+
+      let Array_Method = [
+        'push',
+        // 'pop',
+        'shift',
+        'unshift',
+        'reverse',
+        'sort',
+        'splice'
+      ]
+      // 思路，原型式继承：修改原型链的结构
+      let arr = []
+      // 继承关系: arr->Array.prototype->Object.prototype->...
+      // 调整为，继承关系: arr->改写的方法->Array.prototype->Object.prototype->...
+
+      let array_methods = Object.create(Array.prototype)
+
+      Array_Method.forEach(method => {
+        array_methods[method] = function () {
+          // 调用原来的方法
+          console.log('调用的是拦截的 ' + method + '方法')
+          // 将数据进行响应式化
+          for (let i = 0; i < arguments.length; i++) {
+            reactify(arguments[i])
+          }
+
+          let res = Array.prototype[method].apply(this, arguments)
+          return res
+        }
+      })
+      arr.__proto__ = array_methods
+
+      // reactify(data)
+    </script>
+  </body>
+</html>
