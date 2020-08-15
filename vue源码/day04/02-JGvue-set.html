@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="root">
+      <div class="c1">
+        <div>{{name}}</div>
+        <div>{{age}}</div>
+        <div>{{gender}}</div>
+        <ul>
+          <li>1</li>
+          <li>2</li>
+          <li>3</li>
+        </ul>
+      </div>
+    </div>
+    <script>
+      // 响应式化
+      function defineReactive (target, key, value, enumerable = true) {
+        // 折中处理以后， this就是vue示例
+        let that = this
+        // 简化
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
+          // 非数组引用类型
+          reactify(value, that)
+        }
+        // 非引用类型
+        Object.defineProperty(target, key, {
+          configurable: true,
+          enumerable: !!enumerable,
+          get () {
+            console.log('读取属性')
+            return value
+          },
+          set (newVal) {
+            // 模板刷新(这现在是假的， 只是演示)
+            // vue示例？ watcher不会有这个问题
+
+            console.log('设置属性')
+            value = reactify(newVal)
+            that.mountComponent()
+          }
+        })
+      }
+      /**
+       * @name: reactify
+       * @Author: litianhua
+       * @Date: 2020-08-09 22:19:03
+       * @Description: 将对象响应式化
+       * @params: {o: object}
+       * @return {}
+       */
+      function reactify (o, vm) {
+        let keys = Object.keys(o)
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i] //属性名
+          const value = o[key]
+          // 判断这个属性是否为引用类型
+          // 判断是不是数组
+          // 引用类型需要递归
+          // 数组，需要循环数组，将数组里面的元素进行响应式化
+          // 如果不是引用类型，需要使用defineReactive将其变成响应式的
+          // 如果是引用类型，还是需要使用defineReactive将其变成响应式的
+          if (Array.isArray(value)) {
+            // 数组
+            value.__proto__ = array_methods //数组就响应式了
+            for (let j = 0; j < value.length; j++) {
+              reactify(value[j], vm) //数组
+            }
+          } else {
+            // 对象或值类型
+            defineReactive.call(vm, o, key, value, true)
+          }
+          // 只需要在这里添加代理即可(问题： 在这里写代码是会递归的)
+          // 如果在这里将属性映射到vue示例上，那么就表示vue实例可以使用属性key
+          // {data: {name: ..., child:{name: 'jim'}}}
+          // 所以代码需要改写
+        }
+      }
+
+      let Array_Method = [
+        'push',
+        // 'pop',
+        'shift',
+        'unshift',
+        'reverse',
+        'sort',
+        'splice'
+      ]
+      // 思路，原型式继承：修改原型链的结构
+      let arr = []
+      // 继承关系: arr->Array.prototype->Object.prototype->...
+      // 调整为，继承关系: arr->改写的方法->Array.prototype->Object.prototype->...
+
+      let array_methods = Object.create(Array.prototype)
+
+      Array_Method.forEach(method => {
+        array_methods[method] = function () {
+          // 调用原来的方法
+          console.log('调用的是拦截的 ' + method + '方法')
+          // 将数据进行响应式化
+          for (let i = 0; i < arguments.length; i++) {
+            reactify(arguments[i])
+          }
+
+          let res = Array.prototype[method].apply(this, arguments)
+          return res
+        }
+      })
+      arr.__proto__ = array_methods
+
+      // 解析文本节点的正则表达式
+      let rBrace = /\{\{(.+?)\}\}/g
+      /**
+       * @name: getValueByPath
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:09:05
+       * @Description: 根据路径访问对象成员
+       * @params: {obj: Objection 数据源对象, path: 数据访问路径}
+       * @return {res: any 根据path去到的obj的属性值}
+       */
+      function getValueByPath (obj, path) {
+        let paths = path.split('.') // [xxx, yyy, zzz]
+        let res = obj
+        let prop = null
+        while ((prop = paths.shift())) {
+          res = res[prop]
+        }
+        return res
+      }
+
+      /**
+       * @name: class VNode
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:10:45
+       * @Description: 虚拟DOM构造函数，生成带坑的虚拟DOM
+       * @params: {tag: String 节点名称; data: Object 节点的属性; value: String || undefined 文本节点的值，其他类型为undefined;
+       * type：number 节点类型}
+       * @return {Object }
+       */
+      class VNode {
+        constructor (tag, data, value, type) {
+          this.tag = tag && tag.toLowerCase()
+          this.data = data
+          this.value = value
+          this.type = type
+          this.children = []
+        }
+        appendChild (vNode) {
+          this.children.push(vNode)
+        }
+      }
+      // 由HTML(带有Vue的指令等特性) DOM生成虚拟DOM：可以当做compiler
+      function getVNode (node) {
+        let nodeType = node.nodeType
+        let _vnode = null
+        if (nodeType === 1) {
+          // 元素
+          let nodeName = node.nodeName
+          let attrs = node.attributes
+          let _attrObj = {}
+          for (let i = 0; i < attrs.length; i++) {
+            // attrs[i] 属性节点(nodeType === 2)
+            _attrObj[attrs[i].nodeName] = attrs[i].nodeValue
+          }
+          _vnode = new VNode(nodeName, _attrObj, undefined, nodeType)
+          // 考虑 node 的子元素
+          let childNodes = node.childNodes
+          for (let i = 0; i < childNodes.length; i++) {
+            _vnode.appendChild(getVNode(childNodes[i]))
+          }
+        } else if (nodeType === 3) {
+          _vnode = new VNode(undefined, undefined, node.nodeValue, nodeType)
+        }
+        return _vnode
+      }
+
+      /**
+       * @name: parseNode
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:41:46
+       * @Description: 将不带坑的虚拟DOM转化为真实DOM
+       * @params: {vNode: Object 不带坑的虚拟DOM}
+       * @return {node: Object 真实DOM}
+       */
+      function parseVNode (vNode) {
+        let node = null
+        if (vNode.type === 1) {
+          node = document.createElement(vNode.tag)
+          // 添加属性
+          for (const key in vNode.data) {
+            if (vNode.data.hasOwnProperty(key)) {
+              node[key] = vNode.data[key]
+            }
+          }
+          if (vNode.children) {
+            for (let i = 0; i < vNode.children.length; i++) {
+              node.appendChild(parseVNode(vNode.children[i]))
+            }
+          }
+        } else if (vNode.type === 3) {
+          node = document.createTextNode(vNode.value)
+        }
+
+        return node
+      }
+      // 将带有坑的VNODe与data结合得到有数据的VNODe，模拟：AST->vNode
+      function combine (vNode, data) {
+        const _type = vNode.type
+        const _data = vNode.data
+        const _tag = vNode.tag
+        const _children = vNode.children
+        let _value = vNode.value
+
+        let _vNode = null
+        if (_type === 3) {
+          // 文本节点
+          _value = _value.replace(rBrace, function (_, g) {
+            return getValueByPath(data, g.trim())
+          })
+          _vNode = new VNode(_tag, _data, _value, _type)
+        } else if (_type === 1) {
+          // 元素节点
+          _vNode = new VNode(_tag, _data, _value, _type)
+          _children.forEach(_subvNode => {
+            _vNode.appendChild(combine(_subvNode, data))
+          })
+        }
+        return _vNode
+      }
+      /**
+       * @name: JGVue
+       * @Author: litianhua
+       * @Date: 2020-08-08 22:50:43
+       * @Description: 完成 模板-》AST(简化为带坑的虚拟DOM)-》虚拟DOM(数据已填入)-》渲染出页面的功能
+       * @params: "{options: Object Vue实例的选项，如data，el等}"
+       * @return {undefined: 无返回值}
+       */
+      function JGVue (options) {
+        this._options = options
+        this._data = options.data
+        let elm = document.querySelector(options.el) //在vue中是字符串， 这里是DOM
+        this._template = elm //在vue中是字符串， 这里是DOM
+        this._parent = elm.parentNode
+        console.log(this._parent.contains(this._template))
+        reactify(this._data, this)
+        this.mount() // 挂载
+      }
+      /**
+       * @name: JGVue.prototype.mount
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:00:55
+       * @Description: 提供一个生成虚拟DOM的render方法，并将虚拟DOM渲染到页面中
+       * @params: {}
+       * @return {undefined: 无返回值}
+       */
+      JGVue.prototype.mount = function () {
+        // 需要提供一个render方法: 作用是生成虚拟DOM(不带坑)
+        // 如果有自定义的render，就使用自定义的，否则用默认的
+        if (typeof this._options.render !== 'function') {
+          this.render = this.createRenderFn()
+        } else {
+          this.render = this._options.render
+        }
+
+        this.mountComponent()
+      }
+      /**
+       * @name: JGVue.prototype.mountComponent
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:03:58
+       * @Description: 将虚拟DOM渲染到页面中
+       * @params: {}
+       * @return {}
+       */
+      JGVue.prototype.mountComponent = function () {
+        // 执行 mountComponent()函数
+        let mount = () => {
+          this.update(this.render())
+        }
+        mount.call(this) //本质上应该教给watcher来调用，但是暂时还没研究到watcher
+
+        // 为什么不直接用update
+        // this.update(this.render()) //使用发布订阅模式，渲染和计算的行为应该教给watcher来完成
+      }
+
+      /**
+       * @Author: litianhua
+       * @Date: 2020-08-08 22:47:39
+       * @Description:
+       * 这里是生成render函数，
+       * 目的是缓存抽象语法树(我们使用虚拟DOM来模拟)
+       * 在真正的Vue中，使用了二次提交的  设计结构
+       * 1. 在页面中的DOM 和 虚拟DOM是 一一对应的关系
+       * 2. 先有AST和数据生成VNode(新， render)
+       * 3. 将旧的VNode和新的VNode比较(diff)，更新
+       * @params:
+       * @return {}
+       */
+      JGVue.prototype.createRenderFn = function () {
+        // Vue：将AST与Data合成，生成VNODe
+        // 简化：带坑的VNode + data =》 含有数据的VNode
+        let ast = getVNode(this._template)
+        return function render () {
+          // 将带坑的VNode转换为 带数据的VNode
+          return combine(ast, this._data)
+        }
+      }
+
+      /**
+       * @name: JGVue.prototype.update
+       * @Author: litianhua
+       * @Date: 2020-08-08 23:43:41
+       * @Description: 将虚拟DOM渲染到页面中: diff算法就在这里(简化，不diff直接替换)
+       * @params: {vNode: 不带坑的虚拟节点}
+       * @return {undefined}
+       */
+      //
+      JGVue.prototype.update = function (vNode) {
+        // 简化 直接生成HTML DOM replaceChild到页面中
+        const node = parseVNode(vNode)
+        /* 这个算法是不负责任的
+          每次会将页面中的DOM全部替换
+        */
+        // console.log('this ===>', this, this._parent, this._template)
+
+        this._parent.replaceChild(node, this._template)
+        this._template = node
+        this._parent = node.parentNode
+      }
+      let app = new JGVue({
+        el: '#root',
+        data: {
+          name: '张三',
+          datas: [
+            { info: '好难啊' },
+            { info: '太难了' },
+            { info: '真的难吗' },
+            { info: '练习一下' }
+          ]
+        }
+      })
+      // 修改数据的时候，元素要刷新
+    </script>
+  </body>
+</html>

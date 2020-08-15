@@ -149,3 +149,28 @@ let o = {
     已经将对象改成响应式的了，但是如果直接给对象赋值，赋值另一个对象，就不是响应式的了，怎么办？？
     在set的时候，把value响应式化
 # 发布订阅模式
+任务：
+    - 作业
+    - 代理方法(app.name, app._data.name)
+    - 事件模型(node: event 模块)
+    - vue 中observer与watcher和Dep的关系
+
+代理方法就是要将app._data中的成员映射到app上
+
+由于需要在更新数据的时候，更新页面的内容
+所以 app._data访问的成员 与 app 访问的成员应该是同一个成员
+
+由于 app._data 已经是响应式的对象了，所以只需要让app访问的成员去访问app._data的对应成员就可以了
+
+```js
+app.name 转换为 app._data.name
+```
+
+引入了一个函数Proxy(target, src, prop) 将target与src的成员映射到一起
+
+这里是因为当时没有`Proxy`语法(ES6)
+
+我们之前处理的reactify方法已经不行了，我们需要一个新的方法来处理
+
+提供一个Observer的方法，在这个方法当中 对属性进行处理
+可以将这个方法封装到initData方法中
