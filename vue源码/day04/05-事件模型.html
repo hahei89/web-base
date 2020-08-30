@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <script>
+      // 全部的event对象，提供on,off,emit方法
+      var event = (function () {
+        eventObjs = {}
+        return {
+          /* 注册事件，可以连续注册，可以注册多个事件 */
+          on: function (type, handler) {
+            ;(eventObjs[type] || (eventObjs[type] = [])).push(handler)
+          },
+          /* 移除事件，如果没有参数，移除所有事件；如果只带有事件名参数，那么就移除事件名下的所有事件；如果带有两个参数，那么就表示移除某一个事件的具体处理函数 */
+          off: function (type, handler) {
+            if (arguments.length === 0) {
+              //没有参数，移除所有的事件
+              eventObjs = {}
+            } else if (arguments.length === 1) {
+              //只有该事件的类型，移除该事件的所有处理函数
+              eventObjs[type] = []
+            } else if (arguments.length === 2) {
+              // 移除type的handler处理函数
+              // 使用循环移除所有的该函数对应的type事件
+              let _events = eventObjs[type]
+              if (!_events) return
+              // 倒着循环，数组的序号不会受到影响
+              for (let i = _events.length; i >= 0; i--) {
+                if(_events[i] === handler){
+                  _events.splice(i, 1)
+                }
+              }
+            }
+          },
+          /* 触发事件，包装参数 传递给处理函数 */
+          emit: function (type) {
+            console.log(arguments[1])
+            // Array.form   es6也可以使用这个方法
+            let args = Array.prototype.slice.call(arguments, 1) // 获得arguments从1开始的所有数据
+            let _events = eventObjs[type]
+            if(!_events) return
+            for(let i=0;i<_events.length;i++){
+              // 如果要绑定上下文，就需要使用call或apply
+              _events[i].apply(null, args)
+            }
+          }
+        }
+      })()
+    </script>
+    <script>
+      // 注册事件
+      event.on('click', () => {
+        console.log('第一个click事件')
+      })
+
+      console.log('1')
+      console.log('1')
+      console.log('1')
+      console.log('1')
+      console.log('1')
+      // event.on('click', () => {}) // 匿名函数，无法移除，在移除的时候找不到这块内存
+      // event.on('click', () => {})
+      // event.on('meipo', () => {})
+      // event.on('meipo', () => {})
+      // 别的事情
+      event.emit('click')
+    </script>
+  </body>
+</html>
